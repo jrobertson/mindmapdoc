@@ -29,20 +29,34 @@ class MindmapDoc
     @svg = build_svg(@tree)    
     
   end
+  
+  def load(s='mindmap.md')
+    buffer = File.read(s)
+    import(buffer)
+  end
 
   def to_svg()
     @svg
-  end
+  end   
 
   def to_tree()
-    @tree
+    lines = @tree.lines
+    lines.shift    
+    lines.map! {|x| x[2..-1]}.join
   end
+  
+  alias to_s to_tree
 
   def to_md()
     @txtdoc
   end
 
   alias to_doc to_md
+  
+  def save(s='mindmap.md')
+    File.write s, @txtdoc
+    'mindmap written to file'
+  end
 
   private
   
@@ -66,16 +80,10 @@ class MindmapDoc
       "#{ x[/\d/]} id='#{id}'>#{x[/(?<=\>).*/]}"
     end
     
-    linex = md.scan(/#[^\n]+\n/).map {|x| ('  ' * (x.scan(/#/).length - 1)) + x[/(?<=# ).*/]}
-    #log.info 'mindmap: linex: ' + linex.inspect
-    @root = linex.shift
-    linex.map! {|x| x[2..-1]}
-    #log.info 'mindmap: root: ' + @root.inspect
-    txt = linex.join("\n")
-    
-    #log.info 'mindmap: txt: ' + txt.inspect
+    lines = md.scan(/#[^\n]+\n/).map {|x| ('  ' * (x.scan(/#/).length - 1)) + x[/(?<=# ).*/]}
+    @root = lines.first
 
-    [txt, s]
+    [lines.join("\n"), s]
   end
 
 
@@ -83,7 +91,7 @@ class MindmapDoc
   #
   def parse_tree(s)
 
-    asrc = [@root] + s.gsub(/\r/,'').strip.lines.map {|x| '  ' + x}
+    asrc = [@root + "\n"] + s.gsub(/\r/,'').strip.lines.map {|x| '  ' + x}
 
     a2 = asrc.inject([]) do |r,x| 
 
@@ -95,7 +103,6 @@ class MindmapDoc
 
     end
     
-    #log.info 'mindmap: a2' + a2.inspect
     a = @txtdoc.split(/.*(?=\n#)/).map(&:strip)
 
     a3 = []
@@ -103,12 +110,10 @@ class MindmapDoc
     a2.each do |x|
 
       r = a.grep /#{x}/
-      #log.info 'mindmap: ' + r.inspect
       r2 = r.any? ? r.first : x
       a3 << "\n" + r2.strip.sub(/\w/) {|x| x.upcase} + "\n"
 
     end
-    #log.info 'mindmap: a3:'  + a3.inspect
     
     [asrc.join, a3.join]
 
