@@ -10,16 +10,18 @@ class MindmapDoc
 
   attr_accessor :root
 
-  def initialize(s=nil, root: 'root')
+  def initialize(s=nil, root: 'root', debug: false)
 
-    @root, @tree, @txtdoc, @svg = root, '', '', ''
+    @root, @tree, @txtdoc, @svg, @debug = root, '', '', '', debug
     import(s) if s
     
   end
   
-  def import(s)
+  def import(raw_s)
     
-    if s =~ /^# / then
+    s = raw_s.strip
+    
+    if s =~ /^#+ / then
       @txtdoc = s.gsub(/\r/,'')
       @tree, @html = parse_doc s
     else
@@ -35,14 +37,19 @@ class MindmapDoc
     import(buffer)
   end
 
+  def to_html()
+    @html
+  end
+  
   def to_svg()
     @svg
   end   
 
-  def to_tree()
+  def to_tree(rooted: false)
     lines = @tree.lines
     lines.shift    
-    lines.map! {|x| x[2..-1]}.join
+    r = lines.map! {|x| x[2..-1]}.join
+    @root + "\n" + r.lines.map {|x| '  ' + x}.join if rooted
   end
   
   alias to_s to_tree
@@ -74,13 +81,16 @@ class MindmapDoc
   # the rendered Markdown
   #
   def parse_doc(md)
+    
+    puts 'inside parse_doc: ' + md if @debug
 
     s = RDiscount.new(md.gsub(/\r/,'')).to_html.gsub(/(?<=\<h)[^\<]+/) do |x| 
       id = x[/(?<=\>).*/].downcase.gsub(/\s/,'')
       "#{ x[/\d/]} id='#{id}'>#{x[/(?<=\>).*/]}"
     end
     
-    lines = md.scan(/#[^\n]+\n/).map {|x| ('  ' * (x.scan(/#/).length - 1)) + x[/(?<=# ).*/]}
+    lines = md.scan(/#[^\n]+\n/)\
+        .map {|x| ('  ' * (x.scan(/#/).length - 1)) + x[/(?<=# ).*/]}
     @root = lines.first
 
     [lines.join("\n"), s]
@@ -91,7 +101,7 @@ class MindmapDoc
   #
   def parse_tree(s)
 
-    asrc = [@root + "\n"] + s.gsub(/\r/,'').strip.lines.map {|x| '  ' + x}
+#     asrc = [@root + "\n"] + s.gsub(/\r/,'').strip.lines.map {|x| '  ' + x}
 
     a2 = asrc.inject([]) do |r,x| 
 
