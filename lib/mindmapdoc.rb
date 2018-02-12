@@ -43,7 +43,8 @@ class MindmapDoc
   def transform(s)
     
     a = s.split(/(?=<mindmap>)/)
-
+    puts 'transform: a: ' + a.inspect if @debug
+    
     count = 0
     
     a2 = a.map do |x|
@@ -102,10 +103,11 @@ class MindmapDoc
 
   private
   
-  def build_svg(s)
+  def build_svg(s, auto_url: true)
     
-    src = s.lines.map {|x| "%s # #%s" % [x.chomp, x.downcase.gsub(/\s/,'')]}\
-            .join("\n")
+    src = s.lines.map do |x| 
+      "%s # #%s" % [x.chomp, x.strip.downcase.gsub(/ +/,'-')]
+    end.join("\n")
     
     mmv = Mindmapviz.new src, fields: %w(label url), delimiter: ' # ' 
     mmv.to_svg.sub(/.*(?=\<svg)/m,'')
@@ -116,9 +118,11 @@ class MindmapDoc
   #
   def mm_template(svg, doc, count)
 
+    style = 'float: right; width: 50%; overflow-y: auto; height: 70vh'
+    
 "<div id='mindmap#{count}'>
 #{svg}
-<div markdown='1'>
+<div markdown='1' style='#{style}'>
 #{doc}
 </div>
 </div>
