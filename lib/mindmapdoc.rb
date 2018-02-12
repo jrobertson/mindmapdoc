@@ -36,7 +36,36 @@ class MindmapDoc
     buffer = File.read(s)
     import(buffer)
   end
+  
+  # parses a string containing 1 or more embedded <mindmap> elements and 
+  # outputs the SVG and associated doc
+  #
+  def transform(s)
+    
+    a = s.split(/(?=<mindmap>)/)
 
+    count = 0
+    
+    a2 = a.map do |x|
+
+      if x =~ /^<mindmap>/ then
+        
+        count += 1
+        
+        mm, remaining = x[/<mindmap>(.*)/m,1].split(/<\/mindmap>/,2)
+        raw_tree, raw_md = mm.split(/-{10,}/,2)
+        mm1, mm2 = [raw_tree, raw_md].map {|x| MindmapDoc.new x}
+        
+        mm_template(mm1.to_svg, mm2.to_doc, count)    
+        
+      else
+        x
+      end
+
+    end.join
+    
+  end    
+  
   def to_html()
     @html
   end
@@ -46,10 +75,16 @@ class MindmapDoc
   end   
 
   def to_tree(rooted: false)
-    lines = @tree.lines
-    lines.shift    
-    r = lines.map! {|x| x[2..-1]}.join
-    @root + "\n" + r.lines.map {|x| '  ' + x}.join if rooted
+        
+    if rooted then
+      @root + "\n" + @tree
+    else
+      
+      lines = @tree.lines      
+      lines.shift  if lines.first[/^\S/]
+      lines.map! {|x| x[2..-1]}.join
+    end
+    
   end
   
   alias to_s to_tree
@@ -77,6 +112,20 @@ class MindmapDoc
     
   end
   
+  # used by public method transform()
+  #
+  def mm_template(svg, doc, count)
+
+"<div id='mindmap#{count}'>
+#{svg}
+<div markdown='1'>
+#{doc}
+</div>
+</div>
+"
+  end
+  
+  
   # returns a indented string representation of the mindmap and HTML from 
   # the rendered Markdown
   #
@@ -91,17 +140,17 @@ class MindmapDoc
     
     lines = md.scan(/#[^\n]+\n/)\
         .map {|x| ('  ' * (x.scan(/#/).length - 1)) + x[/(?<=# ).*/]}
-    @root = lines.first
+    @root = lines.first if lines.first[/^# /]
 
     [lines.join("\n"), s]
   end
-
+  
 
   # returns a markdown document
   #
   def parse_tree(s)
 
-#     asrc = [@root + "\n"] + s.gsub(/\r/,'').strip.lines.map {|x| '  ' + x}
+    asrc = [@root + "\n"] + s.gsub(/\r/,'').strip.lines.map {|x| '  ' + x}
 
     a2 = asrc.inject([]) do |r,x| 
 
