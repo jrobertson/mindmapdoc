@@ -6,11 +6,12 @@ require 'rdiscount'
 require 'mindmapviz'
 
 
+
 class MindmapDoc
 
   attr_accessor :root
 
-  def initialize(s=nil, root: 'root', debug: false)
+  def initialize(s=nil, root: nil, debug: false)
 
     @root, @tree, @txtdoc, @svg, @debug = root, '', '', '', debug
     import(s) if s
@@ -42,22 +43,24 @@ class MindmapDoc
   #
   def transform(s)
     
-    a = s.split(/(?=<mindmap>)/)
+    a = s.split(/(?=^<mindmap[^>]*>)/)
     puts 'transform: a: ' + a.inspect if @debug
     
     count = 0
     
     a2 = a.map do |x|
 
-      if x =~ /^<mindmap>/ then
+      if x =~ /^<mindmap/ then
         
         count += 1
         
-        mm, remaining = x[/<mindmap>(.*)/m,1].split(/<\/mindmap>/,2)
+        mm, remaining = x[/<mindmap[^>]*>(.*)/m,1].split(/<\/mindmap>/,2)
         raw_tree, raw_md = mm.split(/-{10,}/,2)
         mm1, mm2 = [raw_tree, raw_md].map {|x| MindmapDoc.new x}
+        docwidth = x[/<mindmap +docwidth=['"]([^'"]+)/,1]
+        puts 'docwidth: ' + docwidth.inspect if @debug
         
-        mm_template(mm1.to_svg, mm2.to_doc, count)    
+        mm_template(mm1.to_svg, mm2.to_doc, count, docwidth) + remaining
         
       else
         x
@@ -116,9 +119,10 @@ class MindmapDoc
   
   # used by public method transform()
   #
-  def mm_template(svg, doc, count)
+  def mm_template(svg, doc, count, docwidth='50%')
 
-    style = 'float: right; width: 50%; overflow-y: auto; height: 70vh'
+    style = "float: right; width: #{docwidth || '50%'}; \
+overflow-y: auto; height: 70vh; "
     
 "<div id='mindmap#{count}'>
 #{svg}
@@ -154,7 +158,17 @@ class MindmapDoc
   #
   def parse_tree(s)
 
-    asrc = [@root + "\n"] + s.gsub(/\r/,'').strip.lines.map {|x| '  ' + x}
+    puts 'inside parse_tree' if @debug
+    
+    lines = s.gsub(/\r/,'').strip.lines
+    
+    @root = if lines.first[/^[^#\s]/] then
+      lines.shift.chomp
+    elsif @root.nil?
+      'root'
+    end
+  
+    asrc = [@root + "\n"] + lines.map {|x| '  ' + x}
 
     a2 = asrc.inject([]) do |r,x| 
 
