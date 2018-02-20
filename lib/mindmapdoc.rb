@@ -2,7 +2,8 @@
 
 # file: mindmapdoc.rb
 
-require 'rdiscount'
+
+require 'kramdown'
 require 'mindmapviz'
 
 
@@ -141,10 +142,7 @@ overflow-y: auto; height: 70vh; "
     
     puts 'inside parse_doc: ' + md if @debug
 
-    s = RDiscount.new(md.gsub(/\r/,'')).to_html.gsub(/(?<=\<h)[^\<]+/) do |x| 
-      id = x[/(?<=\>).*/].downcase.gsub(/\s/,'')
-      "#{ x[/\d/]} id='#{id}'>#{x[/(?<=\>).*/]}"
-    end
+    s = Kramdown::Document.new(md.gsub(/\r/,'')).to_html
     
     lines = md.scan(/#[^\n]+\n/)\
         .map {|x| ('  ' * (x.scan(/#/).length - 1)) + x[/(?<=# ).*/]}
