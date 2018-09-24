@@ -21,7 +21,7 @@ class MindmapDoc
   
   def import(raw_s)
     
-    s = raw_s.strip
+    s = raw_s.lstrip
     
     if s =~ /^#+ / then
       @txtdoc = s.gsub(/\r/,'')
@@ -30,6 +30,7 @@ class MindmapDoc
       @tree, @txtdoc = parse_tree s
     end
 
+    puts '@tree: ' + @tree.inspect if @debug
     @svg = build_svg(@tree)    
     
   end
@@ -44,6 +45,7 @@ class MindmapDoc
   #
   def transform(s)
     
+    data = []
     a = s.split(/(?=^<mindmap[^>]*>)/)
     puts 'transform: a: ' + a.inspect if @debug
     
@@ -56,24 +58,72 @@ class MindmapDoc
         count += 1
         
         mm, remaining = x[/<mindmap[^>]*>(.*)/m,1].split(/<\/mindmap>/,2)
-        raw_tree, raw_md = mm.split(/-{10,}/,2)
-        mm1, mm2 = [raw_tree, raw_md].map {|x| MindmapDoc.new x}
-        docwidth = x[/<mindmap +docwidth=['"]([^'"]+)/,1]
-        puts 'docwidth: ' + docwidth.inspect if @debug
         
-        mm_template(mm1.to_svg, mm2.to_doc, count, docwidth) + remaining
+        if @debug then
+          puts 'mm: ' + mm.inspect
+          puts 'remaining: ' + remaining.inspect
+        end
+        
+        raw_tree, raw_md = mm.split(/-{10,}/,2)
+        puts 'raw_md: ' + raw_md.inspect
+        
+        if @debug then
+          puts 'raw_tree: ' + raw_tree.inspect
+          puts 'raw_md: ' + raw_md.inspect
+        end
+        
+        mm1 = MindmapDoc.new raw_tree
+
+        if raw_md then
+          mm2 = MindmapDoc.new raw_md
+          data << mm2.to_mmv(id: count)
+        end
+
+        docwidth = x[/<mindmap +docwidth=['"]([^'"]+)/,1]
+        
+        
+        if @debug then
+          
+          puts 'docwidth: ' + docwidth.inspect 
+          puts 'mm1.to_svg: ' + mm1.to_svg.inspect
+          puts 'mm2.to_doc: '  + mm2.to_doc.inspect
+          
+        end
+                
+        mm_template("!s[](#mindmap#{count})\n\n", mm2.to_doc, 
+                    count, docwidth) + remaining
         
       else
         x
       end
 
-    end.join
+    end
+
+    a2.join + "\n__DATA__\n\n" + data.join("\n")
     
-  end    
+  end   
   
   def to_html()
     @html
   end
+  
+  def to_mindmapviz(id: '')
+    
+    lines = to_tree().lines.map do |raw_label|
+      
+      label = raw_label.chomp
+      "%s # #%s" % [label, label.lstrip.downcase.gsub(' ', '-')]
+    end
+    
+"<?mindmapviz root='#{root}' fields='label, url' delimiter=' # ' " \
+        + "id='mindmap#{id}'?>
+    
+#{lines.join("\n")}
+"
+    
+  end
+  
+  alias to_mmv to_mindmapviz
   
   def to_svg()
     @svg
@@ -82,7 +132,7 @@ class MindmapDoc
   def to_tree(rooted: false)
         
     if rooted then
-      @root + "\n" + @tree
+      @tree
     else
       
       lines = @tree.lines      
@@ -122,9 +172,11 @@ class MindmapDoc
   #
   def mm_template(svg, doc, count, docwidth='50%')
 
+    puts 'docwidth: ' + docwidth.inspect if @debug
+    
     style = "float: right; width: #{docwidth || '50%'}; \
 overflow-y: auto; height: 70vh; "
-    
+    puts 'style: ' + style.inspect if @debug
 "<div id='mindmap#{count}'>
 #{svg}
 <div markdown='1' style='#{style}'>
@@ -146,8 +198,8 @@ overflow-y: auto; height: 70vh; "
     
     lines = md.scan(/#[^\n]+\n/)\
         .map {|x| ('  ' * (x.scan(/#/).length - 1)) + x[/(?<=# ).*/]}
-    @root = lines.first if lines.first[/^# /]
-
+    @root = lines.first if lines.first
+    puts 'lines: ' + lines.inspect if @debug
     [lines.join("\n"), s]
   end
   
