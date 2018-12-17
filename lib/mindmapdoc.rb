@@ -3,12 +3,14 @@
 # file: mindmapdoc.rb
 
 
+require 'c32'
 require 'kramdown'
 require 'mindmapviz'
 
 
 
 class MindmapDoc
+  using ColouredText
 
   attr_accessor :root
 
@@ -30,7 +32,7 @@ class MindmapDoc
       @tree, @txtdoc = parse_tree s
     end
 
-    puts '@tree: ' + @tree.inspect if @debug
+    puts ('@tree: ' + @tree.inspect).debug if @debug
     @svg = build_svg(@tree)    
     
   end
@@ -47,7 +49,8 @@ class MindmapDoc
     
     data = []
     a = s.split(/(?=^<mindmap[^>]*>)/)
-    puts 'transform: a: ' + a.inspect if @debug
+    puts ('transform: a: ' + a.inspect).debug if @debug
+    return s unless a.length > 1
     
     count = 0
     
@@ -60,16 +63,17 @@ class MindmapDoc
         mm, remaining = x[/<mindmap[^>]*>(.*)/m,1].split(/<\/mindmap>/,2)
         
         if @debug then
-          puts 'mm: ' + mm.inspect
-          puts 'remaining: ' + remaining.inspect
+          puts ('mm: ' + mm.inspect + 
+          ' remaining: ' + remaining.inspect).debug
         end
         
         raw_tree, raw_md = mm.split(/-{10,}/,2)
-        puts 'raw_md: ' + raw_md.inspect
+        
         
         if @debug then
-          puts 'raw_tree: ' + raw_tree.inspect
-          puts 'raw_md: ' + raw_md.inspect
+          puts ('raw_md: ' + raw_md.inspect +
+          ' raw_tree: ' + raw_tree.inspect + 
+          ' raw_md: ' + raw_md.inspect).debug
         end
         
         mm1 = MindmapDoc.new raw_tree
@@ -84,9 +88,9 @@ class MindmapDoc
         
         if @debug then
           
-          puts 'docwidth: ' + docwidth.inspect 
-          puts 'mm1.to_svg: ' + mm1.to_svg.inspect
-          puts 'mm2.to_doc: '  + mm2.to_doc.inspect
+          puts ('docwidth: ' + docwidth.inspect +
+          ' mm1.to_svg: ' + mm1.to_svg.inspect +
+          ' mm2.to_doc: '  + mm2.to_doc.inspect).debug
           
         end
                 
@@ -99,7 +103,11 @@ class MindmapDoc
 
     end
 
-    a2.join + "\n__DATA__\n\n" + data.join("\n")
+    if data.any? then
+      a2.join + "\n__DATA__\n\n" + data.join("\n")
+    else
+      s
+    end
     
   end   
   
@@ -172,11 +180,11 @@ class MindmapDoc
   #
   def mm_template(svg, doc, count, docwidth='50%')
 
-    puts 'docwidth: ' + docwidth.inspect if @debug
+    puts ('docwidth: ' + docwidth.inspect).debug if @debug
     
     style = "float: right; width: #{docwidth || '50%'}; \
 overflow-y: auto; height: 70vh; "
-    puts 'style: ' + style.inspect if @debug
+    puts ('style: ' + style.inspect).debug if @debug
 "<div id='mindmap#{count}'>
 #{svg}
 <div markdown='1' style='#{style}'>
@@ -192,14 +200,14 @@ overflow-y: auto; height: 70vh; "
   #
   def parse_doc(md)
     
-    puts 'inside parse_doc: ' + md if @debug
+    puts ('inside parse_doc: ' + md).debug if @debug
 
     s = Kramdown::Document.new(md.gsub(/\r/,'')).to_html
     
     lines = md.scan(/#[^\n]+\n/)\
         .map {|x| ('  ' * (x.scan(/#/).length - 1)) + x[/(?<=# ).*/]}
     @root = lines.first if lines.first
-    puts 'lines: ' + lines.inspect if @debug
+    puts ('lines: ' + lines.inspect).debug if @debug
     [lines.join("\n"), s]
   end
   
@@ -208,7 +216,7 @@ overflow-y: auto; height: 70vh; "
   #
   def parse_tree(s)
 
-    puts 'inside parse_tree' if @debug
+    puts ('inside parse_tree').debug if @debug
     
     lines = s.gsub(/\r/,'').strip.lines
     
