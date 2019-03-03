@@ -17,6 +17,7 @@ class MindmapDoc
   def initialize(s=nil, root: nil, debug: false)
 
     @root, @tree, @txtdoc, @svg, @debug = root, '', '', '', debug
+    puts '@root' + @root.inspect if @debug
     import(s) if s
     
   end
@@ -76,10 +77,10 @@ class MindmapDoc
           ' raw_md: ' + raw_md.inspect).debug
         end
         
-        mm1 = MindmapDoc.new raw_tree
+        mm1 = MindmapDoc.new raw_tree, debug: @debug
 
         if raw_md then
-          mm2 = MindmapDoc.new raw_md
+          mm2 = MindmapDoc.new raw_md, debug: @debug
           data << mm2.to_mmv(id: count)
         end
 
@@ -115,6 +116,32 @@ class MindmapDoc
     @html
   end
   
+  def to_mindmapdoc(s)
+
+    s2 = s.split(/(?=-mm-+)/).map do |raw_s|
+
+      if raw_s =~ /^-mm--/ then
+        
+        a2 = raw_s[/.*(?=^-{10,})/m].lines
+        remaining = ($').lines[1..-1].join
+        a2.shift
+        content = a2.join
+        rooted = content =~ /^# / ? true : false
+        puts ('content: ' + content.inspect).debug if @debug
+        tree = MindmapDoc.new(content, debug: @debug).to_tree(rooted: rooted)
+        "<mindmap>\n%s\n\n----------\n\n%s</mindmap>\n\n%s" \
+            % [tree, content, remaining]
+        
+      else
+        raw_s
+      end
+
+    end.join()
+
+  end
+  
+  alias to_mmd to_mindmapdoc
+  
   def to_mindmapviz(id: '')
     
     lines = to_tree().lines.map do |raw_label|
@@ -123,7 +150,7 @@ class MindmapDoc
       "%s # #%s" % [label, label.lstrip.downcase.gsub(' ', '-')]
     end
     
-"<?mindmapviz root='#{root}' fields='label, url' delimiter=' # ' " \
+"<?mindmapviz root=\"#{root}\" fields='label, url' delimiter=' # ' " \
         + "id='mindmap#{id}'?>
     
 #{lines.join("\n")}
@@ -202,11 +229,18 @@ overflow-y: auto; height: 70vh; "
     
     puts ('inside parse_doc: ' + md).debug if @debug
 
-    s = Kramdown::Document.new(md.gsub(/\r/,'')).to_html
+    s = Kramdown::Document.new(md.gsub(/\r/,'')
+                               .gsub(/\b'\b/,"{::nomarkdown}'{:/}")).to_html
     
     lines = md.scan(/#[^\n]+\n/)\
         .map {|x| ('  ' * (x.scan(/#/).length - 1)) + x[/(?<=# ).*/]}
-    @root = lines.first if lines.first
+    #@root = lines.first if lines.first
+    @root = if lines.first[/^[^#\s]/] then
+      lines.shift.chomp
+    elsif @root.nil?
+      'root'
+    end
+    
     puts ('lines: ' + lines.inspect).debug if @debug
     [lines.join("\n"), s]
   end
@@ -216,15 +250,17 @@ overflow-y: auto; height: 70vh; "
   #
   def parse_tree(s)
 
-    puts ('inside parse_tree').debug if @debug
+    puts ('inside parse_tree').info if @debug
     
     lines = s.gsub(/\r/,'').strip.lines
+    puts ('lines: ' + lines.inspect) if @debug
     
     @root = if lines.first[/^[^#\s]/] then
       lines.shift.chomp
     elsif @root.nil?
       'root'
     end
+    puts ('@root:'  + @root.inspect).debug if @debug
   
     asrc = [@root + "\n"] + lines.map {|x| '  ' + x}
 
