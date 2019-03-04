@@ -118,9 +118,9 @@ class MindmapDoc
   
   def to_mindmapdoc(s)
 
-    s2 = s.split(/(?=-mm-+)/).map do |raw_s|
+    s2 = s.split(/(?=^--?mm-+)/).map do |raw_s|
 
-      if raw_s =~ /^-mm--/ then
+      if raw_s =~ /^--?mm--/ then
         
         a2 = raw_s[/.*(?=^-{10,})/m].lines
         remaining = ($').lines[1..-1].join
@@ -218,6 +218,7 @@ overflow-y: auto; height: 70vh; "
 #{doc}
 </div>
 </div>
+<div style='clear:both'/>
 "
   end
   
