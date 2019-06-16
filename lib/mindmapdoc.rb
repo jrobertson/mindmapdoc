@@ -8,7 +8,6 @@ require 'kramdown'
 require 'mindmapviz'
 
 
-
 class MindmapDoc
   using ColouredText
   include RXFHelperModule
@@ -35,7 +34,7 @@ class MindmapDoc
     end
 
     puts ('@tree: ' + @tree.inspect).debug if @debug
-    @svg = build_svg(@tree)    
+    @svg = build_svg(to_tree(rooted: true))
     
   end
   
@@ -167,8 +166,8 @@ class MindmapDoc
 
   def to_tree(rooted: false)
         
-    if rooted then
-      @tree
+    if rooted then      
+      @root.chomp + "\n" + @tree
     else
       
       lines = @tree.lines      
@@ -255,16 +254,17 @@ overflow-y: auto; height: 70vh; "
     puts ('inside parse_tree').info if @debug
     
     lines = s.gsub(/\r/,'').strip.lines
+
+    if @root.nil? and lines.grep(/^\w/).length == 1 then
+      @root = lines.shift
+      lines.map! {|x| x[2..-1]}
+    end 
+
     puts ('lines: ' + lines.inspect) if @debug
     
-    @root = if lines.first[/^[^#\s]/] then
-      lines.shift.chomp
-    elsif @root.nil?
-      'root'
-    end
     puts ('@root:'  + @root.inspect).debug if @debug
   
-    asrc = [@root + "\n"] + lines.map {|x| '  ' + x}
+    asrc = lines.map {|x| '  ' + x}
 
     a2 = asrc.inject([]) do |r,x| 
 
@@ -275,6 +275,8 @@ overflow-y: auto; height: 70vh; "
       end
 
     end
+
+    a2.unshift('# ' + @root + "\n") if @root 
     
     a = @txtdoc.split(/.*(?=\n#)/).map(&:strip)
 
