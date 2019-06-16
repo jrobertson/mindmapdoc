@@ -11,6 +11,7 @@ require 'mindmapviz'
 
 class MindmapDoc
   using ColouredText
+  include RXFHelperModule
 
   attr_accessor :root
 
@@ -39,7 +40,7 @@ class MindmapDoc
   end
   
   def load(s='mindmap.md')
-    buffer = File.read(s)
+    buffer = FileX.read(s)
     import(buffer)
   end
   
@@ -186,7 +187,7 @@ class MindmapDoc
   alias to_doc to_md
   
   def save(s='mindmap.md')
-    File.write s, @txtdoc
+    FileX.write s, @txtdoc
     'mindmap written to file'
   end
 
