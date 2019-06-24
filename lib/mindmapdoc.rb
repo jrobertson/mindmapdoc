@@ -7,7 +7,6 @@ require 'c32'
 require 'kramdown'
 require 'mindmapviz'
 
-
 class MindmapDoc
   using ColouredText
   include RXFHelperModule
@@ -116,6 +115,8 @@ class MindmapDoc
     @html
   end
   
+  # used for finding and parsing mindmapdoc blocks within a Markdown document
+  # 
   def to_mindmapdoc(s)
 
     s2 = s.split(/(?=^--?mm-+)/).map do |raw_s|
@@ -234,12 +235,14 @@ overflow-y: auto; height: 70vh; "
                                .gsub(/\b'\b/,"{::nomarkdown}'{:/}")).to_html
     
     lines = md.scan(/#[^\n]+\n/)\
-        .map {|x| ('  ' * (x.scan(/#/).length - 1)) + x[/(?<=# ).*/]}
-    #@root = lines.first if lines.first
-    @root = if lines.first[/^[^#\s]/] then
-      lines.shift.chomp
-    elsif @root.nil?
-      'root'
+        .map {|x| ('  ' * (x.scan(/#/).length - 1)) + x[/(?<=# ).*/].lstrip}
+
+    if @root.nil? then
+      @root = if lines.first[/^[^#\s]/] then
+        lines.shift.chomp
+      else
+        'root'
+      end
     end
     
     puts ('lines: ' + lines.inspect).debug if @debug
@@ -254,6 +257,12 @@ overflow-y: auto; height: 70vh; "
     puts ('inside parse_tree').info if @debug
     
     lines = s.gsub(/\r/,'').strip.lines
+
+    if @root.nil? and s[/^\w[^\n]+\n\n/] then
+      @root = lines.shift
+      lines.shift
+    end
+
 
     if @root.nil? and lines.grep(/^\w/).length == 1 then
       @root = lines.shift

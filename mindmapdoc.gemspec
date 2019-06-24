@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'mindmapdoc'
-  s.version = '0.3.6'
+  s.version = '0.3.7'
   s.summary = 'Transforms a markdown document into a mindmap or a ' +
       ' mindmap into a markdown document'
   s.authors = ['James Robertson']
