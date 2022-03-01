@@ -6,10 +6,12 @@
 require 'c32'
 require 'kramdown'
 require 'mindmapviz'
+require 'rxfreadwrite'
+
 
 class MindmapDoc
   using ColouredText
-  include RXFHelperModule
+  include RXFReadWriteModule
 
   attr_accessor :root
 

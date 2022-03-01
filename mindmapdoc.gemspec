@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'mindmapdoc'
-  s.version = '0.3.7'
+  s.version = '0.4.0'
   s.summary = 'Transforms a markdown document into a mindmap or a ' +
       ' mindmap into a markdown document'
   s.authors = ['James Robertson']
@@ -11,6 +11,6 @@ Gem::Specification.new do |s|
   s.signing_key = '../privatekeys/mindmapdoc.pem'
   s.cert_chain  = ['gem-public_cert.pem']
   s.license = 'MIT'
-  s.email = 'james@jamesrobertson.eu'
+  s.email = 'digital.robertson@gmail.com'
   s.homepage = 'https://github.com/jrobertson/mindmapdoc'
 end
